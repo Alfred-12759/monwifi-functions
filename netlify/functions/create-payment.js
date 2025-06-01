@@ -35,20 +35,11 @@ exports.handler = async function(event, context) {
         };
     }
 
-    if (typeof currency !== 'string' || currency.trim() === '') {
-        return {
-            statusCode: 400,
-            body: JSON.stringify({
-                error: 'Paramètre "currency" invalide. Une chaîne comme "XOF" est attendue.'
-            })
-        };
-    }
-
-    const fedapayUrl = 'https://sandbox-api.fedapay.com/v1/transactions';
+    const fedapayUrl = 'https://sandbox.fedapay.com/v1/transactions';
     const secretKey = process.env.FEDAPAY_SECRET_KEY;
 
     if (!secretKey) {
-        console.error('Clé secrète FedaPay manquante dans les variables d’environnement.');
+        console.error('Clé secrète FedaPay manquante.');
         return {
             statusCode: 500,
             body: JSON.stringify({
@@ -68,14 +59,13 @@ exports.handler = async function(event, context) {
                 'Authorization': `Bearer ${secretKey}`
             },
             body: JSON.stringify({
-    transaction: {
-        amount,
-        description,
-        currency,  // au lieu de { iso: currency }
-        callback_url
-    }
-})
-
+                transaction: {
+                    amount: amount,
+                    description: description,
+                    currency_iso: currency,  // <- ici le changement clé
+                    callback_url: callback_url
+                }
+            })
         });
 
         const result = await response.json();
@@ -91,19 +81,18 @@ exports.handler = async function(event, context) {
             };
         }
 
-        const transactionData = result?.data;
+        console.log('Transaction créée, ID:', result.response?.data?.id);
 
-        if (transactionData && transactionData.authorization_url) {
+        if (result.response?.data?.authorization_url) {
             return {
                 statusCode: 200,
                 body: JSON.stringify({
-                    authorization_url: transactionData.authorization_url,
-                    transaction_id: transactionData.id,
-                    status: transactionData.status
+                    authorization_url: result.response.data.authorization_url,
+                    transaction_id: result.response.data.id,
+                    status: result.response.data.status
                 })
             };
         } else {
-            console.error('Réponse inattendue:', result);
             return {
                 statusCode: 500,
                 body: JSON.stringify({
