@@ -35,8 +35,8 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // 🚨 SANDBOX URL
-    const fedapayUrl = 'https://sandbox.fedapay.com/v1/transactions';
+    // ✅ BONNE URL SANDBOX
+    const fedapayUrl = 'https://sandbox-api.fedapay.com/v1/transactions';
     const secretKey = process.env.FEDAPAY_SECRET_KEY;
 
     if (!secretKey) {
@@ -82,18 +82,19 @@ exports.handler = async function(event, context) {
             };
         }
 
-        console.log('Transaction créée, ID:', result.response?.data?.id);
+        const transactionData = result?.data;
 
-        if (result.response?.data?.authorization_url) {
+        if (transactionData && transactionData.authorization_url) {
             return {
                 statusCode: 200,
                 body: JSON.stringify({
-                    authorization_url: result.response.data.authorization_url,
-                    transaction_id: result.response.data.id,
-                    status: result.response.data.status
+                    authorization_url: transactionData.authorization_url,
+                    transaction_id: transactionData.id,
+                    status: transactionData.status
                 })
             };
         } else {
+            console.error('Réponse inattendue:', result);
             return {
                 statusCode: 500,
                 body: JSON.stringify({
