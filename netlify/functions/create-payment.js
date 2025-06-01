@@ -35,7 +35,7 @@ exports.handler = async function(event, context) {
         };
     }
 
-    const fedapayUrl = 'https://sandbox.fedapay.com/v1/transactions'; // Remplace par https://api.fedapay.com/v1/transactions en prod
+    const fedapayUrl = 'https://api.fedapay.com/v1/transactions'; // Remplace par https://api.fedapay.com/v1/transactions en prod
     const secretKey = process.env.FEDAPAY_SECRET_KEY; // Charge depuis .env ou l’environnement
 
     if (!secretKey) {
