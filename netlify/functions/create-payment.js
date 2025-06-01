@@ -48,26 +48,26 @@ exports.handler = async function(event, context) {
         };
     }
 
-    const payload = {
-        transaction: {
-            amount,
-            description,
-            currency,        // On suppose que c’est juste le code (ex: 'XOF')
-            callback_url
-        }
-    };
+    
 
     try {
-        const response = await fetch(fedapayUrl, {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': process.env.FEDAPAY_SECRET_KEY,
-        'User-Agent': 'Mozilla/5.0 (Node.js server)'
-    },
-    body: JSON.stringify(payload)
+        const response = await fetch('https://api.fedapay.com/v1/transactions', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${process.env.FEDAPAY_SECRET_KEY}`
+  },
+  body: JSON.stringify({
+    transaction: {
+      amount,
+      description,
+      currency: { iso: currency },
+      callback_url
+    }
+  })
 });
+
 
         const result = await response.json();
 
