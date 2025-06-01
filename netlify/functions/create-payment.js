@@ -68,12 +68,14 @@ exports.handler = async function(event, context) {
                 'Authorization': `Bearer ${secretKey}`
             },
             body: JSON.stringify({
-                transaction: {
-                    amount: amount,
-                    description: description,
-                    currency_iso: currency,  // CHANGEMENT IMPORTANT ICI
-                    callback_url: callback_url
-                }
+    transaction: {
+        amount,
+        description,
+        currency: { iso: currency },
+        callback_url
+    }
+
+
             })
         });
 
