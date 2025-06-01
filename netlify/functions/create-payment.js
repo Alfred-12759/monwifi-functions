@@ -35,8 +35,9 @@ exports.handler = async function(event, context) {
         };
     }
 
-    const fedapayUrl = 'https://api.fedapay.com/v1/transactions'; // Remplace par https://api.fedapay.com/v1/transactions en prod
-    const secretKey = process.env.FEDAPAY_SECRET_KEY; // Charge depuis .env ou l’environnement
+    // 🚨 SANDBOX URL
+    const fedapayUrl = 'https://sandbox.fedapay.com/v1/transactions';
+    const secretKey = process.env.FEDAPAY_SECRET_KEY;
 
     if (!secretKey) {
         console.error('Clé secrète FedaPay manquante dans les variables d’environnement.');
@@ -48,26 +49,25 @@ exports.handler = async function(event, context) {
         };
     }
 
-    
+    console.log('Clé API utilisée:', secretKey);
 
     try {
-        const response = await fetch('https://api.fedapay.com/v1/transactions', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'Authorization': `Bearer ${process.env.FEDAPAY_SECRET_KEY}`
-  },
-  body: JSON.stringify({
-    transaction: {
-      amount,
-      description,
-      currency: { iso: currency },
-      callback_url
-    }
-  })
-});
-
+        const response = await fetch(fedapayUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${secretKey}`
+            },
+            body: JSON.stringify({
+                transaction: {
+                    amount,
+                    description,
+                    currency: { iso: currency },
+                    callback_url
+                }
+            })
+        });
 
         const result = await response.json();
 
