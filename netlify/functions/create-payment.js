@@ -16,6 +16,7 @@ exports.handler = async function(event, context) {
     try {
         bodyData = JSON.parse(event.body);
     } catch (err) {
+        console.error('Erreur de parsing JSON:', err);
         return {
             statusCode: 400,
             body: JSON.stringify({ 
@@ -27,30 +28,30 @@ exports.handler = async function(event, context) {
     const { amount, description, currency, callback_url } = bodyData;
 
     if (!amount || !description || !currency || !callback_url) {
-    return {
-        statusCode: 400,
-        body: JSON.stringify({
-            error: 'Paramètres manquants. Requis : amount, description, currency, callback_url.'
-        })
-    };
-}
+        console.error('Paramètres manquants:', { amount, description, currency, callback_url });
+        return {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: 'Paramètres manquants. Requis : amount, description, currency, callback_url.'
+            })
+        };
+    }
 
-if (typeof currency !== 'string' || currency.trim() === '') {
-    return {
-        statusCode: 400,
-        body: JSON.stringify({
-            error: 'Paramètre "currency" invalide. Une chaîne comme "XOF" est attendue.'
-        })
-    };
-}
-
-    
+    if (typeof currency !== 'string' || currency.trim() === '') {
+        console.error('Paramètre currency invalide:', currency);
+        return {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: 'Paramètre "currency" invalide. Une chaîne comme "XOF" est attendue.'
+            })
+        };
+    }
 
     const fedapayUrl = 'https://sandbox-api.fedapay.com/v1/transactions';
     const secretKey = process.env.FEDAPAY_SECRET_KEY;
 
     if (!secretKey) {
-        console.error('Clé secrète FedaPay manquante dans les variables d’environnement.');
+        console.error('Clé secrète FedaPay manquante.');
         return {
             statusCode: 500,
             body: JSON.stringify({
@@ -59,7 +60,17 @@ if (typeof currency !== 'string' || currency.trim() === '') {
         };
     }
 
-    console.log('Clé API utilisée:', secretKey);
+    // Construire le payload à envoyer
+    const payload = {
+        transaction: {
+            amount,
+            description,
+            currency,  // ici on passe directement la chaîne comme "XOF"
+            callback_url
+        }
+    };
+
+    console.log('Payload envoyé à FedaPay:', JSON.stringify(payload, null, 2));
 
     try {
         const response = await fetch(fedapayUrl, {
@@ -69,19 +80,25 @@ if (typeof currency !== 'string' || currency.trim() === '') {
                 'Accept': 'application/json',
                 'Authorization': `Bearer ${secretKey}`
             },
-            body: JSON.stringify({
-    transaction: {
-        amount,
-        description,
-        currency: { iso: currency },
-        callback_url
-    }
-
-
-            })
+            body: JSON.stringify(payload)
         });
 
-        const result = await response.json();
+        const rawResponseText = await response.text();
+        console.log('Réponse brute FedaPay:', rawResponseText);
+
+        let result;
+        try {
+            result = JSON.parse(rawResponseText);
+        } catch (jsonError) {
+            console.error('Erreur parsing réponse JSON:', jsonError);
+            return {
+                statusCode: 500,
+                body: JSON.stringify({
+                    error: 'Réponse non JSON reçue de FedaPay',
+                    details: rawResponseText
+                })
+            };
+        }
 
         if (!response.ok) {
             console.error('Erreur HTTP FedaPay:', result);
@@ -106,7 +123,7 @@ if (typeof currency !== 'string' || currency.trim() === '') {
                 })
             };
         } else {
-            console.error('Réponse inattendue de FedaPay:', result);
+            console.error('Réponse inattendue:', result);
             return {
                 statusCode: 500,
                 body: JSON.stringify({
@@ -116,7 +133,7 @@ if (typeof currency !== 'string' || currency.trim() === '') {
             };
         }
     } catch (error) {
-        console.error('Erreur FedaPay (exception):', error.message);
+        console.error('Erreur lors de la requête FedaPay:', error.message);
         return {
             statusCode: 500,
             body: JSON.stringify({
