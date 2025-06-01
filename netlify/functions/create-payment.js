@@ -68,20 +68,19 @@ exports.handler = async function(event, context) {
                 'Authorization': `Bearer ${secretKey}`
             },
             body: JSON.stringify({
-    transaction: {
-        amount,
-        description,
-        currency_iso: currency,  // <- ici le changement clé
+                transaction: {
+                    amount: amount,
+                    description: description,
+                    currency_iso: currency,  // CHANGEMENT IMPORTANT ICI
                     callback_url: callback_url
-    }
-})
-
+                }
+            })
         });
 
         const result = await response.json();
 
         if (!response.ok) {
-            console.error('Erreur HTTP:', result);
+            console.error('Erreur HTTP FedaPay:', result);
             return {
                 statusCode: response.status,
                 body: JSON.stringify({
@@ -103,7 +102,7 @@ exports.handler = async function(event, context) {
                 })
             };
         } else {
-            console.error('Réponse inattendue:', result);
+            console.error('Réponse inattendue de FedaPay:', result);
             return {
                 statusCode: 500,
                 body: JSON.stringify({
@@ -113,7 +112,7 @@ exports.handler = async function(event, context) {
             };
         }
     } catch (error) {
-        console.error('Erreur FedaPay:', error.message);
+        console.error('Erreur FedaPay (exception):', error.message);
         return {
             statusCode: 500,
             body: JSON.stringify({
