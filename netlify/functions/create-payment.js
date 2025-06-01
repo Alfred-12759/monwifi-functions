@@ -68,13 +68,14 @@ exports.handler = async function(event, context) {
                 'Authorization': `Bearer ${secretKey}`
             },
             body: JSON.stringify({
-                transaction: {
-                    amount,
-                    description,
-                    currency: { iso: currency },  // ✅ format correct
-                    callback_url
-                }
-            })
+    transaction: {
+        amount,
+        description,
+        currency,  // au lieu de { iso: currency }
+        callback_url
+    }
+})
+
         });
 
         const result = await response.json();
