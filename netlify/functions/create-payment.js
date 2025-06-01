@@ -1,144 +1,83 @@
-const fetch = require('node-fetch');
+// netlify/functions/create-payment.js
+
+const axios = require('axios');
 
 exports.handler = async function(event, context) {
-    console.log('Requête reçue: Méthode =', event.httpMethod);
+    console.log('👉 Requête reçue:', event.body);
 
     if (event.httpMethod !== 'POST') {
         return {
             statusCode: 405,
-            body: JSON.stringify({ 
-                error: 'Méthode non autorisée. Utilisez POST.'
-            })
+            body: JSON.stringify({ error: 'Méthode non autorisée. Utilisez POST.' })
         };
     }
 
-    let bodyData;
+    let data;
     try {
-        bodyData = JSON.parse(event.body);
-    } catch (err) {
-        console.error('Erreur de parsing JSON:', err);
+        data = JSON.parse(event.body);
+    } catch (error) {
+        console.error('❌ Erreur parsing JSON:', error);
         return {
             statusCode: 400,
-            body: JSON.stringify({ 
-                error: 'Corps de requête invalide. JSON attendu.'
-            })
+            body: JSON.stringify({ error: 'Format JSON invalide.' })
         };
     }
 
-    const { amount, description, currency, callback_url } = bodyData;
+    const { amount, description, currency, callback_url } = data;
 
     if (!amount || !description || !currency || !callback_url) {
-        console.error('Paramètres manquants:', { amount, description, currency, callback_url });
+        console.warn('⚠️ Paramètres manquants:', { amount, description, currency, callback_url });
         return {
             statusCode: 400,
-            body: JSON.stringify({
-                error: 'Paramètres manquants. Requis : amount, description, currency, callback_url.'
-            })
+            body: JSON.stringify({ error: 'Paramètres manquants. Requis : amount, description, currency, callback_url.' })
         };
     }
 
-    if (typeof currency !== 'string' || currency.trim() === '') {
-        console.error('Paramètre currency invalide:', currency);
-        return {
-            statusCode: 400,
-            body: JSON.stringify({
-                error: 'Paramètre "currency" invalide. Une chaîne comme "XOF" est attendue.'
-            })
-        };
-    }
-
-    const fedapayUrl = 'https://sandbox-api.fedapay.com/v1/transactions';
     const secretKey = process.env.FEDAPAY_SECRET_KEY;
+    console.log('🔑 FEDAPAY_SECRET_KEY:', secretKey ? '✅ défini' : '❌ NON défini');
 
     if (!secretKey) {
-        console.error('Clé secrète FedaPay manquante.');
         return {
             statusCode: 500,
-            body: JSON.stringify({
-                error: 'Configuration serveur invalide (clé secrète manquante).'
-            })
+            body: JSON.stringify({ error: 'Clé secrète FedaPay non configurée.' })
         };
     }
 
-    // Construire le payload à envoyer
+    const fedapayUrl = 'https://api.fedapay.com/v1/transactions';
+
     const payload = {
         transaction: {
             amount,
             description,
-            currency,  // ici on passe directement la chaîne comme "XOF"
+            currency,
             callback_url
         }
     };
 
-    console.log('Payload envoyé à FedaPay:', JSON.stringify(payload, null, 2));
+    console.log('📦 Données envoyées à FedaPay:', JSON.stringify(payload));
 
     try {
-        const response = await fetch(fedapayUrl, {
-            method: 'POST',
+        const response = await axios.post(fedapayUrl, payload, {
             headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${secretKey}`
-            },
-            body: JSON.stringify(payload)
+                Authorization: `Bearer ${secretKey}`,
+                'Content-Type': 'application/json'
+            }
         });
 
-        const rawResponseText = await response.text();
-        console.log('Réponse brute FedaPay:', rawResponseText);
+        console.log('✅ Réponse FedaPay:', response.data);
 
-        let result;
-        try {
-            result = JSON.parse(rawResponseText);
-        } catch (jsonError) {
-            console.error('Erreur parsing réponse JSON:', jsonError);
-            return {
-                statusCode: 500,
-                body: JSON.stringify({
-                    error: 'Réponse non JSON reçue de FedaPay',
-                    details: rawResponseText
-                })
-            };
-        }
-
-        if (!response.ok) {
-            console.error('Erreur HTTP FedaPay:', result);
-            return {
-                statusCode: response.status,
-                body: JSON.stringify({
-                    error: 'Erreur HTTP FedaPay',
-                    details: result
-                })
-            };
-        }
-
-        const transactionData = result?.data;
-
-        if (transactionData && transactionData.authorization_url) {
-            return {
-                statusCode: 200,
-                body: JSON.stringify({
-                    authorization_url: transactionData.authorization_url,
-                    transaction_id: transactionData.id,
-                    status: transactionData.status
-                })
-            };
-        } else {
-            console.error('Réponse inattendue:', result);
-            return {
-                statusCode: 500,
-                body: JSON.stringify({
-                    error: 'Réponse inattendue de FedaPay',
-                    details: result
-                })
-            };
-        }
-    } catch (error) {
-        console.error('Erreur lors de la requête FedaPay:', error.message);
         return {
-            statusCode: 500,
+            statusCode: 200,
+            body: JSON.stringify(response.data)
+        };
+    } catch (error) {
+        console.error('❌ Erreur FedaPay:', error.response ? error.response.data : error.message);
+
+        return {
+            statusCode: error.response ? error.response.status : 500,
             body: JSON.stringify({
-                error: 'Erreur lors de la création de la transaction',
-                details: error.message
+                error: 'Erreur lors de la création de la transaction.',
+                details: error.response ? error.response.data : error.message
             })
         };
     }
