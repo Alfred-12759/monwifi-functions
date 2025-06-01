@@ -35,7 +35,15 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // ✅ BONNE URL SANDBOX
+    if (typeof currency !== 'string' || currency.trim() === '') {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: 'Paramètre "currency" invalide. Une chaîne comme "XOF" est attendue.'
+            })
+        };
+    }
+
     const fedapayUrl = 'https://sandbox-api.fedapay.com/v1/transactions';
     const secretKey = process.env.FEDAPAY_SECRET_KEY;
 
@@ -63,7 +71,7 @@ exports.handler = async function(event, context) {
                 transaction: {
                     amount,
                     description,
-                    currency: { iso: currency },
+                    currency: { iso: currency },  // ✅ format correct
                     callback_url
                 }
             })
