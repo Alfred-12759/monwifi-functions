@@ -59,14 +59,15 @@ exports.handler = async function(event, context) {
 
     try {
         const response = await fetch(fedapayUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': secretKey
-            },
-            body: JSON.stringify(payload)
-        });
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': process.env.FEDAPAY_SECRET_KEY,
+        'User-Agent': 'Mozilla/5.0 (Node.js server)'
+    },
+    body: JSON.stringify(payload)
+});
 
         const result = await response.json();
 
