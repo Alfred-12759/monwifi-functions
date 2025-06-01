@@ -27,22 +27,24 @@ exports.handler = async function(event, context) {
     const { amount, description, currency, callback_url } = bodyData;
 
     if (!amount || !description || !currency || !callback_url) {
-        return {
-            statusCode: 400,
-            body: JSON.stringify({
-                error: 'Paramètres manquants. Requis : amount, description, currency, callback_url.'
-            })
-        };
-    }
+    return {
+        statusCode: 400,
+        body: JSON.stringify({
+            error: 'Paramètres manquants. Requis : amount, description, currency, callback_url.'
+        })
+    };
+}
 
-    if (typeof currency !== 'string' || currency.trim() === '') {
-        return {
-            statusCode: 400,
-            body: JSON.stringify({
-                error: 'Paramètre "currency" invalide. Une chaîne comme "XOF" est attendue.'
-            })
-        };
-    }
+if (typeof currency !== 'string' || currency.trim() === '') {
+    return {
+        statusCode: 400,
+        body: JSON.stringify({
+            error: 'Paramètre "currency" invalide. Une chaîne comme "XOF" est attendue.'
+        })
+    };
+}
+
+    
 
     const fedapayUrl = 'https://sandbox-api.fedapay.com/v1/transactions';
     const secretKey = process.env.FEDAPAY_SECRET_KEY;
