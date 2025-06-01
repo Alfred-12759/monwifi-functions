@@ -1,5 +1,3 @@
-// netlify/functions/create-payment.js
-
 const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
@@ -12,8 +10,7 @@ exports.handler = async function(event, context) {
         return {
             statusCode: 405,
             body: JSON.stringify({ 
-                error: 'Méthode non autorisée. Utilisez POST.',
-                debug: { method: event.httpMethod }
+                error: 'Méthode non autorisée. Utilisez POST.'
             })
         };
     }
@@ -22,73 +19,72 @@ exports.handler = async function(event, context) {
     try {
         bodyData = JSON.parse(event.body);
     } catch (err) {
-        console.error('Erreur JSON parse:', err.message);
         return {
             statusCode: 400,
             body: JSON.stringify({ 
-                error: 'Corps de requête invalide. JSON attendu.',
-                debug: { rawBody: event.body }
+                error: 'Corps de requête invalide. JSON attendu.'
             })
         };
     }
 
     const { amount, description, currency, callback_url } = bodyData;
 
-    if (!amount || !description || !currency || !callback_url) {
-        console.warn('Champs manquants:', { amount, description, currency, callback_url });
-        return {
-            statusCode: 400,
-            body: JSON.stringify({ 
-                error: 'Champs requis manquants.',
-                debug: { received: bodyData }
-            })
-        };
-    }
+    const fedapayUrl = 'https://sandbox.fedapay.com/v1/transactions'; // vérifie la doc officielle
 
-    const secretKey = 'sk_sandbox_tcHeGte0r-9orONZEH822msx'; // Remplace par TA CLÉ SECRÈTE sandbox
-    const fedapayUrl = 'https://sandbox.fedapay.com/api/v1/transactions';
+    const payload = {
+        transaction: {
+            amount,
+            description,
+            currency: { iso: currency },
+            callback_url
+        }
+    };
 
     try {
         const response = await fetch(fedapayUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${secretKey}`
+                'Accept': 'application/json',
+                'Authorization': 'sk_sandbox_tcHeGte0r-9orONZEH822msx' // <-- remplace par TA clé secrète
             },
-            body: JSON.stringify({
-                transaction: {
-                    amount,
-                    description,
-                    currency: { iso: currency },  // Format correct attendu par l’API
-                    callback_url
-                }
-            })
+            body: JSON.stringify(payload)
         });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Erreur HTTP:', errorText);
+            return {
+                statusCode: response.status,
+                body: JSON.stringify({
+                    error: 'Erreur HTTP FedaPay',
+                    details: errorText
+                })
+            };
+        }
 
         const result = await response.json();
 
-        console.log('Réponse Fedapay:', result);
+        console.log('Réponse FedaPay:', result);
 
-        if (result.response && result.response.data && result.response.data.authorization_url) {
+        if (result?.response?.data?.authorization_url) {
             return {
                 statusCode: 200,
                 body: JSON.stringify({
-                    authorization_url: result.response.data.authorization_url,
-                    debug: { fedapayResult: result }
+                    authorization_url: result.response.data.authorization_url
                 })
             };
         } else {
-            console.error('Erreur : Réponse inattendue de Fedapay', result);
             return {
                 statusCode: 500,
                 body: JSON.stringify({
-                    error: 'Erreur dans la réponse Fedapay',
+                    error: 'Réponse inattendue de FedaPay',
                     details: result
                 })
             };
         }
     } catch (error) {
-        console.error('Erreur FedaPay:', error.message);
+        console.error('Erreur FedaPay:', error);
         return {
             statusCode: 500,
             body: JSON.stringify({
