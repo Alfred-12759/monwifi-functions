@@ -1,10 +1,7 @@
 const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
-    console.log('Requête reçue:', {
-        method: event.httpMethod,
-        body: event.body
-    });
+    console.log('Requête reçue: Méthode =', event.httpMethod);
 
     if (event.httpMethod !== 'POST') {
         return {
@@ -29,13 +26,33 @@ exports.handler = async function(event, context) {
 
     const { amount, description, currency, callback_url } = bodyData;
 
-    const fedapayUrl = 'https://sandbox.fedapay.com/v1/transactions'; // vérifie la doc officielle
+    if (!amount || !description || !currency || !callback_url) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: 'Paramètres manquants. Requis : amount, description, currency, callback_url.'
+            })
+        };
+    }
+
+    const fedapayUrl = 'https://sandbox.fedapay.com/v1/transactions'; // Remplace par https://api.fedapay.com/v1/transactions en prod
+    const secretKey = process.env.FEDAPAY_SECRET_KEY; // Charge depuis .env ou l’environnement
+
+    if (!secretKey) {
+        console.error('Clé secrète FedaPay manquante dans les variables d’environnement.');
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                error: 'Configuration serveur invalide (clé secrète manquante).'
+            })
+        };
+    }
 
     const payload = {
         transaction: {
             amount,
             description,
-            currency: { iso: currency },
+            currency,        // On suppose que c’est juste le code (ex: 'XOF')
             callback_url
         }
     };
@@ -46,32 +63,33 @@ exports.handler = async function(event, context) {
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'Authorization': 'sk_sandbox_tcHeGte0r-9orONZEH822msx' // <-- remplace par TA clé secrète
+                'Authorization': secretKey
             },
             body: JSON.stringify(payload)
         });
 
+        const result = await response.json();
+
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Erreur HTTP:', errorText);
+            console.error('Erreur HTTP:', result);
             return {
                 statusCode: response.status,
                 body: JSON.stringify({
                     error: 'Erreur HTTP FedaPay',
-                    details: errorText
+                    details: result
                 })
             };
         }
 
-        const result = await response.json();
+        console.log('Transaction créée, ID:', result.response?.data?.id);
 
-        console.log('Réponse FedaPay:', result);
-
-        if (result?.response?.data?.authorization_url) {
+        if (result.response?.data?.authorization_url) {
             return {
                 statusCode: 200,
                 body: JSON.stringify({
-                    authorization_url: result.response.data.authorization_url
+                    authorization_url: result.response.data.authorization_url,
+                    transaction_id: result.response.data.id,
+                    status: result.response.data.status
                 })
             };
         } else {
@@ -84,7 +102,7 @@ exports.handler = async function(event, context) {
             };
         }
     } catch (error) {
-        console.error('Erreur FedaPay:', error);
+        console.error('Erreur FedaPay:', error.message);
         return {
             statusCode: 500,
             body: JSON.stringify({
