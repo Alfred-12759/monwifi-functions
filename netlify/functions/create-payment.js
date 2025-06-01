@@ -45,26 +45,24 @@ exports.handler = async function(event, context) {
         };
     }
 
-    const publicKey = 'pk_sandbox_-vwdeEKjxyByK6ZfRiMaW3w8';
+    const secretKey = 'sk_sandbox_tcHeGte0r-9orONZEH822msx'; // Remplace par TA CLÉ SECRÈTE sandbox
     const fedapayUrl = 'https://sandbox.fedapay.com/api/v1/transactions';
-
-    const payload = {
-        transaction: {
-            amount,
-            description,
-            currency,
-            callback_url
-        }
-    };
 
     try {
         const response = await fetch(fedapayUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${publicKey}`
+                'Authorization': `Bearer ${secretKey}`
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+                transaction: {
+                    amount,
+                    description,
+                    currency: { iso: currency },  // Format correct attendu par l’API
+                    callback_url
+                }
+            })
         });
 
         const result = await response.json();
@@ -80,6 +78,7 @@ exports.handler = async function(event, context) {
                 })
             };
         } else {
+            console.error('Erreur : Réponse inattendue de Fedapay', result);
             return {
                 statusCode: 500,
                 body: JSON.stringify({
