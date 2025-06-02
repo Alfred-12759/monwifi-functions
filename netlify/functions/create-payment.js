@@ -37,16 +37,6 @@ exports.handler = async function(event, context) {
         };
     }
 
-    if (typeof currency !== 'string' || currency.trim() === '') {
-        console.error('Paramètre currency invalide:', currency);
-        return {
-            statusCode: 400,
-            body: JSON.stringify({
-                error: 'Paramètre "currency" invalide. Une chaîne comme "XOF" est attendue.'
-            })
-        };
-    }
-
     const fedapayUrl = 'https://sandbox-api.fedapay.com/v1/transactions';
     const secretKey = process.env.FEDAPAY_SECRET_KEY;
 
@@ -60,18 +50,16 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // Construire le payload corrigé
     const payload = {
-    transaction: {
-        amount: {
-            amount,
-            currency
-        },
-        description,
-        callback_url
-    }
-};
-
+        transaction: {
+            amount: {
+                amount,      // on encapsule ici
+                currency     // et ici
+            },
+            description,
+            callback_url
+        }
+    };
 
     console.log('Payload envoyé à FedaPay:', JSON.stringify(payload, null, 2));
 
