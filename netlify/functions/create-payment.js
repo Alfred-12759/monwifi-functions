@@ -62,13 +62,16 @@ exports.handler = async function(event, context) {
 
     // Construire le payload corrigé
     const payload = {
-        transaction: {
+    transaction: {
+        amount: {
             amount,
-            description,
-            currency: { iso: currency },  // <-- correction ici
-            callback_url
-        }
-    };
+            currency
+        },
+        description,
+        callback_url
+    }
+};
+
 
     console.log('Payload envoyé à FedaPay:', JSON.stringify(payload, null, 2));
 
