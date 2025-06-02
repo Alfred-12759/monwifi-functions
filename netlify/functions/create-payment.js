@@ -50,16 +50,15 @@ exports.handler = async function(event, context) {
         };
     }
 
-    const payload = {
-        transaction: {
-            amount: {
-                amount,      // on encapsule ici
-                currency     // et ici
-            },
-            description,
-            callback_url
-        }
-    };
+   const payload = {
+    transaction: {
+        amount,
+        currency,
+        description,
+        callback_url
+    }
+};
+
 
     console.log('Payload envoyé à FedaPay:', JSON.stringify(payload, null, 2));
 
