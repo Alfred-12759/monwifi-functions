@@ -53,7 +53,7 @@ exports.handler = async function(event, context) {
    const payload = {
     transaction: {
         amount,
-        currency,
+        currency_code: currency,
         description,
         callback_url
     }
