@@ -47,26 +47,6 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // === Nouveau bloc : mapper le code texte en ID numérique ===
-    const currencyIdMap = {
-        'XOF': 952, // Franc CFA BCEAO
-        'XAF': 950, // Franc CFA BEAC
-        'USD': 840, // Dollar US
-        'EUR': 978  // Euro
-    };
-
-    const currencyId = currencyIdMap[currency.toUpperCase()];
-    if (!currencyId) {
-        console.error('Code devise inconnu:', currency);
-        return {
-            statusCode: 400,
-            body: JSON.stringify({
-                error: `Code devise inconnu : ${currency}. Codes acceptés : XOF, XAF, USD, EUR.`
-            })
-        };
-    }
-    // ==========================================================
-
     const fedapayUrl = 'https://sandbox-api.fedapay.com/v1/transactions';
     const secretKey = process.env.FEDAPAY_SECRET_KEY;
 
@@ -80,12 +60,12 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // Construire le payload à envoyer
+    // Construire le payload corrigé
     const payload = {
         transaction: {
             amount,
             description,
-            currency: currencyId, // ← on envoie maintenant l’ID numérique
+            currency: { iso: currency },  // <-- correction ici
             callback_url
         }
     };
