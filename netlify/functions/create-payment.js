@@ -100,15 +100,17 @@ exports.handler = async function(event, context) {
 
         const transactionData = result?.data;
 
-        if (transactionData && transactionData.authorization_url) {
-            return {
-                statusCode: 200,
-                body: JSON.stringify({
-                    authorization_url: transactionData.authorization_url,
-                    transaction_id: transactionData.id,
-                    status: transactionData.status
-                })
-            };
+        if (transactionData && transactionData.payment_url) {
+    return {
+        statusCode: 200,
+        body: JSON.stringify({
+            payment_url: transactionData.payment_url,
+            transaction_id: transactionData.id,
+            status: transactionData.status
+        })
+    };
+
+
         } else {
             console.error('Réponse inattendue:', result);
             return {
