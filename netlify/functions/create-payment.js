@@ -3,6 +3,7 @@ const fetch = require('node-fetch');
 exports.handler = async function(event, context) {
     console.log('Requête reçue: Méthode =', event.httpMethod);
 
+    // Autoriser uniquement POST
     if (event.httpMethod !== 'POST') {
         return {
             statusCode: 405,
@@ -27,12 +28,18 @@ exports.handler = async function(event, context) {
 
     const { amount, description, currency, callback_url } = bodyData;
 
-    if (!amount || !description || !currency || !callback_url) {
-        console.error('Paramètres manquants:', { amount, description, currency, callback_url });
+    // Vérifier que les champs obligatoires sont bien présents
+    if (
+        typeof amount !== 'number' || amount <= 0 ||
+        typeof description !== 'string' || !description.trim() ||
+        typeof currency !== 'string' || !currency.trim() ||
+        typeof callback_url !== 'string' || !callback_url.trim()
+    ) {
+        console.error('Paramètres manquants ou invalides:', { amount, description, currency, callback_url });
         return {
             statusCode: 400,
             body: JSON.stringify({
-                error: 'Paramètres manquants. Requis : amount, description, currency, callback_url.'
+                error: 'Paramètres manquants ou invalides. Requis : amount (number > 0), description, currency, callback_url.'
             })
         };
     }
@@ -51,10 +58,10 @@ exports.handler = async function(event, context) {
     }
 
     const payload = {
-        description,
+        description: description.trim(),
         amount,
-        currency: { iso: currency },
-        callback_url
+        currency: { iso: currency.trim().toUpperCase() },
+        callback_url: callback_url.trim()
     };
 
     console.log('Payload envoyé à FedaPay:', JSON.stringify(payload, null, 2));
@@ -100,23 +107,21 @@ exports.handler = async function(event, context) {
 
         const transactionData = result?.data;
 
-        if (transactionData && transactionData.payment_url) {
-    return {
-        statusCode: 200,
-        body: JSON.stringify({
-            payment_url: transactionData.payment_url,
-            transaction_id: transactionData.id,
-            status: transactionData.status
-        })
-    };
-
-
-        } else {
-            console.error('Réponse inattendue:', result);
+        if (transactionData?.payment_url) {
             return {
-                statusCode: 500,
+                statusCode: 200,
                 body: JSON.stringify({
-                    error: 'Réponse inattendue de FedaPay',
+                    payment_url: transactionData.payment_url,
+                    transaction_id: transactionData.id,
+                    status: transactionData.status
+                })
+            };
+        } else {
+            console.error('Réponse FedaPay sans payment_url:', result);
+            return {
+                statusCode: 502,
+                body: JSON.stringify({
+                    error: 'Réponse FedaPay invalide ou incomplète.',
                     details: result
                 })
             };
