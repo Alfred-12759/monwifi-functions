@@ -105,27 +105,27 @@ exports.handler = async function(event, context) {
             };
         }
 
-        const transactionData = result?.data;
+        const transactionData = result?.['v1/transaction'];
+if (transactionData?.payment_url) {
+    return {
+        statusCode: 200,
+        body: JSON.stringify({
+            payment_url: transactionData.payment_url,
+            transaction_id: transactionData.id,
+            status: transactionData.status
+        })
+    };
+} else {
+    console.error('Réponse FedaPay sans payment_url:', result);
+    return {
+        statusCode: 502,
+        body: JSON.stringify({
+            error: 'Réponse FedaPay invalide ou incomplète.',
+            details: result
+        })
+    };
+}
 
-        if (transactionData?.payment_url) {
-            return {
-                statusCode: 200,
-                body: JSON.stringify({
-                    payment_url: transactionData.payment_url,
-                    transaction_id: transactionData.id,
-                    status: transactionData.status
-                })
-            };
-        } else {
-            console.error('Réponse FedaPay sans payment_url:', result);
-            return {
-                statusCode: 502,
-                body: JSON.stringify({
-                    error: 'Réponse FedaPay invalide ou incomplète.',
-                    details: result
-                })
-            };
-        }
     } catch (error) {
         console.error('Erreur lors de la requête FedaPay:', error.message);
         return {
