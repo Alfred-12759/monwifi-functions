@@ -18,7 +18,8 @@ exports.handler = async function(event, context) {
     return {
         statusCode: 302,
         headers: {
-            Location: `https://ton-site.com/success?transaction_id=${transactionId}&status=${status}`
+            Location: `https://monwifi.byethost7.com/success.php?transaction_id=${transactionId}&status=${status}
+`
         },
         body: ''
     };
