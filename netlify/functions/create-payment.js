@@ -27,18 +27,20 @@ exports.handler = async function(event) {
         };
     }
 
-    const { amount, description, currency } = data;
+    const { amount, description, currency, client_name, ticket_type } = data;
 
-    // Vérification des champs
+    // Vérification des champs requis
     if (
         typeof amount !== 'number' || amount <= 0 ||
         typeof description !== 'string' || !description.trim() ||
-        typeof currency !== 'string' || !currency.trim()
+        typeof currency !== 'string' || !currency.trim() ||
+        typeof client_name !== 'string' || !client_name.trim() ||
+        typeof ticket_type !== 'string' || !ticket_type.trim()
     ) {
         return {
             statusCode: 400,
             body: JSON.stringify({
-                error: 'Champs requis manquants ou invalides. Requis : amount (nombre > 0), description, currency (texte).'
+                error: 'Champs requis manquants ou invalides. Requis : amount, description, currency, client_name, ticket_type.'
             })
         };
     }
@@ -57,8 +59,10 @@ exports.handler = async function(event) {
     // Générer une référence unique
     const reference = `ref-${Date.now()}`;
 
-    // URL de redirection après paiement (sur ByetHost)
-    const callback_url = `https://monwifi.byethost7.com/success.php`;
+    // Encoder les infos dans l'URL de callback
+    const encodedClient = encodeURIComponent(client_name);
+    const encodedType = encodeURIComponent(ticket_type);
+    const callback_url = `https://palagames.online/success.php?client_name=${encodedClient}&ticket_type=${encodedType}`;
 
     // Préparer le payload
     const payload = {
