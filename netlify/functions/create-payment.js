@@ -85,6 +85,19 @@ exports.handler = async function(event) {
 
         const result = await response.json();
 
+
+        if (result.transaction && result.transaction.payment_url) {
+    return {
+        statusCode: 200,
+        body: JSON.stringify({
+            payment_url: result.transaction.payment_url,
+            transaction_id: result.transaction.id,
+            status: result.transaction.status
+        })
+    };
+}
+
+
         if (!response.ok || !result.transaction || !result.transaction.payment_url) {
             console.error("Erreur FedaPay:", result);
             return {
