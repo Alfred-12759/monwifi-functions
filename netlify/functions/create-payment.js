@@ -1,9 +1,9 @@
 const fetch = require('node-fetch');
 
 exports.handler = async function(event) {
-    console.log('🔵 Requête reçue: Méthode =', event.httpMethod);
+    console.log('Requête reçue: Méthode =', event.httpMethod);
 
-    // 1. Vérifier la méthode
+    // 1. Vérifier méthode
     if (event.httpMethod !== 'POST') {
         return {
             statusCode: 405,
@@ -11,7 +11,7 @@ exports.handler = async function(event) {
         };
     }
 
-    // 2. Parse le body
+    // 2. Parser le JSON
     let data;
     try {
         data = JSON.parse(event.body);
@@ -22,9 +22,10 @@ exports.handler = async function(event) {
         };
     }
 
+    // 3. Récupération des données
     const { amount, description, currency, client_name, ticket_type, callback_url } = data;
 
-    // 3. Valider les champs
+    // 4. Validation
     if (
         typeof amount !== 'number' || amount <= 0 ||
         typeof description !== 'string' || !description.trim() ||
@@ -41,7 +42,7 @@ exports.handler = async function(event) {
         };
     }
 
-    // 4. Clé secrète
+    // 5. Clé API
     const secretKey = process.env.FEDAPAY_SECRET_KEY;
     if (!secretKey) {
         return {
@@ -50,24 +51,27 @@ exports.handler = async function(event) {
         };
     }
 
-    // 5. Référence et callback avec infos utilisateur
     const reference = `ref-${Date.now()}`;
-    const full_callback_url = `${callback_url}?client_name=${encodeURIComponent(client_name)}&ticket_type=${encodeURIComponent(ticket_type)}`;
+    const fullDescription = `${description} - ${reference}`;
 
-    // 6. Préparer le payload FedaPay
+    // 6. Construction du payload FedaPay
     const payload = {
-    description: `${description.trim()} - ${reference}`,
-    amount,
-    currency: { iso: currency.trim().toUpperCase() },
-    callback_url,
-    customer: {
-        firstname: client_name
-    }
-};
+        description: fullDescription,
+        amount,
+        currency: { iso: currency.toUpperCase() },
+        callback_url,
+        customer: {
+            firstname: client_name,
+            email: `${client_name.toLowerCase().replace(/ /g, '')}@monwifi.com`
+        },
+        metadata: {
+            ticket_type
+        }
+    };
 
+    console.log("Payload envoyé à FedaPay:", JSON.stringify(payload, null, 2));
 
-    console.log('🟡 Payload envoyé à FedaPay:', payload);
-
+    // 7. Requête FedaPay
     try {
         const response = await fetch('https://sandbox-api.fedapay.com/v1/transactions', {
             method: 'POST',
@@ -79,32 +83,12 @@ exports.handler = async function(event) {
             body: JSON.stringify(payload)
         });
 
-        const resultText = await response.text();
-        let result;
-        try {
-            result = JSON.parse(resultText);
-        } catch (e) {
-            console.error('Réponse non JSON:', resultText);
-            return {
-                statusCode: 502,
-                body: JSON.stringify({ error: 'Réponse non JSON reçue de FedaPay.', raw: resultText })
-            };
-        }
+        const result = await response.json();
 
-        // 7. Vérifier si paiement ok
-        const transaction = result.transaction;
-        if (transaction && transaction.payment_url) {
+        if (!response.ok || !result.transaction || !result.transaction.payment_url) {
+            console.error("Erreur FedaPay:", result);
             return {
-                statusCode: 200,
-                body: JSON.stringify({
-                    payment_url: transaction.payment_url,
-                    transaction_id: transaction.id,
-                    status: transaction.status
-                })
-            };
-        } else {
-            return {
-                statusCode: 502,
+                statusCode: response.status,
                 body: JSON.stringify({
                     error: 'Réponse FedaPay incomplète ou invalide.',
                     details: result
@@ -112,14 +96,19 @@ exports.handler = async function(event) {
             };
         }
 
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                payment_url: result.transaction.payment_url,
+                transaction_id: result.transaction.id,
+                status: result.transaction.status
+            })
+        };
     } catch (error) {
-        console.error('❌ Erreur lors de la requête:', error.message);
+        console.error("Erreur de communication:", error.message);
         return {
             statusCode: 500,
-            body: JSON.stringify({
-                error: 'Erreur interne lors de la création de la transaction.',
-                details: error.message
-            })
+            body: JSON.stringify({ error: 'Erreur lors de la communication avec FedaPay.', details: error.message })
         };
     }
 };
