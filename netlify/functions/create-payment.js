@@ -56,11 +56,15 @@ exports.handler = async function(event) {
 
     // 6. Préparer le payload FedaPay
     const payload = {
-        description: `${description} - ${reference}`,
-        amount,
-        currency: { iso: currency.toUpperCase() },
-        callback_url: full_callback_url
-    };
+    description: `${description.trim()} - ${reference}`,
+    amount,
+    currency: { iso: currency.trim().toUpperCase() },
+    callback_url,
+    customer: {
+        firstname: client_name
+    }
+};
+
 
     console.log('🟡 Payload envoyé à FedaPay:', payload);
 
